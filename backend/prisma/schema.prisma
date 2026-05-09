@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CLUB_LEADER
+  MEMBER
+}
+
+enum ClubApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EventType {
+  LECTURE
+  COMPETITION
+  GATHERING
+  VOLUNTEER
+  TRAINING
+}
+
+enum EventStatus {
+  REGISTERING
+  REGISTRATION_CLOSED
+  ONGOING
+  ENDED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  password      String
+  name          String
+  email         String?   @unique
+  phone         String?   @unique
+  role          UserRole  @default(MEMBER)
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  clubApplications     ClubApplication[]  @relation("ApplicationApplicant")
+  reviewedApplications ClubApplication[]  @relation("ApplicationReviewer")
+  memberships          ClubMember[]
+  eventRegistrations   EventRegistration[]
+  checkInRecords       CheckInRecord[]
+  ledClubs             Club[]            @relation("ClubLeader")
+
+  @@map("users")
+}
+
+model ClubCategory {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  clubs Club[]
+  clubApplications ClubApplication[]
+
+  @@map("club_categories")
+}
+
+model ClubApplication {
+  id              String                  @id @default(uuid())
+  applicantId     String
+  name            String
+  categoryId      String
+  description     String
+  logoUrl         String?
+  recruitmentSlogan String?
+  status          ClubApplicationStatus   @default(PENDING)
+  rejectReason    String?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  applicant       User                    @relation("ApplicationApplicant", fields: [applicantId], references: [id])
+  category        ClubCategory            @relation(fields: [categoryId], references: [id])
+  reviewer        User?                   @relation("ApplicationReviewer", fields: [reviewedById], references: [id])
+
+  @@map("club_applications")
+}
+
+model Club {
+  id              String    @id @default(uuid())
+  name            String    @unique
+  categoryId      String
+  description     String
+  logoUrl         String?
+  recruitmentSlogan String?
+  leaderId        String
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  category        ClubCategory     @relation(fields: [categoryId], references: [id])
+  leader          User             @relation("ClubLeader", fields: [leaderId], references: [id])
+  members         ClubMember[]
+  announcements   ClubAnnouncement[]
+  events          Event[]
+
+  @@map("clubs")
+}
+
+model ClubMember {
+  id            String    @id @default(uuid())
+  clubId        String
+  userId        String
+  isViceLeader  Boolean   @default(false)
+  joinedAt      DateTime  @default(now())
+
+  club          Club      @relation(fields: [clubId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([clubId, userId])
+  @@map("club_members")
+}
+
+model ClubAnnouncement {
+  id          String    @id @default(uuid())
+  clubId      String
+  title       String
+  content     String
+  isPinned    Boolean   @default(false)
+  publishedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  club        Club      @relation(fields: [clubId], references: [id])
+
+  @@map("club_announcements")
+}
+
+model Event {
+  id                String      @id @default(uuid())
+  clubId            String
+  name              String
+  location          String
+  eventType         EventType
+  maxParticipants   Int
+  registrationDeadline DateTime
+  description       String
+  coverImageUrl     String?
+  status            EventStatus @default(REGISTERING)
+  startTime         DateTime
+  endTime           DateTime
+  checkInEnabled    Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  club              Club        @relation(fields: [clubId], references: [id])
+  registrations     EventRegistration[]
+  checkInRecords    CheckInRecord[]
+  summary           EventSummary?
+
+  @@map("events")
+}
+
+model EventRegistration {
+  id              String    @id @default(uuid())
+  eventId         String
+  userId          String
+  registeredAt    DateTime  @default(now())
+  isCancelled     Boolean   @default(false)
+  cancelledAt     DateTime?
+
+  event           Event     @relation(fields: [eventId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_registrations")
+}
+
+model CheckInRecord {
+  id              String    @id @default(uuid())
+  eventId         String
+  userId          String
+  checkInTime     DateTime  @default(now())
+
+  event           Event     @relation(fields: [eventId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("check_in_records")
+}
+
+model EventSummary {
+  id              String    @id @default(uuid())
+  eventId         String    @unique
+  content         String
+  photoUrls       String[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  event           Event     @relation(fields: [eventId], references: [id])
+
+  @@map("event_summaries")
+}

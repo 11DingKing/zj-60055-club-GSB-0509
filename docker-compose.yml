@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: club-management-backend
+    ports:
+      - "13055:3000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+    environment:
+      - DATABASE_URL=postgresql://dev:dev123456@host.docker.internal:5432/db_zj_60055
+      - REDIS_URL=redis://default:redis123456@host.docker.internal:6379
+      - JWT_SECRET=club-management-jwt-secret-key-2024
+      - JWT_EXPIRES_IN=7d
+      - PORT=3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - club-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: club-management-frontend
+    ports:
+      - "16055:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    environment:
+      - VITE_API_BASE_URL=http://localhost:13055
+    depends_on:
+      - backend
+    networks:
+      - club-network
+
+networks:
+  club-network:
+    driver: bridge
