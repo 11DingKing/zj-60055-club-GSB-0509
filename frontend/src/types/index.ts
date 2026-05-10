@@ -1,22 +1,22 @@
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  CLUB_LEADER = 'CLUB_LEADER',
-  MEMBER = 'MEMBER',
+  ADMIN = "ADMIN",
+  CLUB_LEADER = "CLUB_LEADER",
+  MEMBER = "MEMBER",
 }
 
 export enum EventType {
-  LECTURE = 'LECTURE',
-  COMPETITION = 'COMPETITION',
-  GATHERING = 'GATHERING',
-  VOLUNTEER = 'VOLUNTEER',
-  TRAINING = 'TRAINING',
+  LECTURE = "LECTURE",
+  COMPETITION = "COMPETITION",
+  GATHERING = "GATHERING",
+  VOLUNTEER = "VOLUNTEER",
+  TRAINING = "TRAINING",
 }
 
 export enum EventStatus {
-  REGISTERING = 'REGISTERING',
-  REGISTRATION_CLOSED = 'REGISTRATION_CLOSED',
-  ONGOING = 'ONGOING',
-  ENDED = 'ENDED',
+  REGISTERING = "REGISTERING",
+  REGISTRATION_CLOSED = "REGISTRATION_CLOSED",
+  ONGOING = "ONGOING",
+  ENDED = "ENDED",
 }
 
 export interface User {
@@ -27,6 +27,7 @@ export interface User {
   phone?: string;
   role: UserRole;
   avatar?: string;
+  points: number;
   createdAt: string;
 }
 
@@ -48,7 +49,7 @@ export interface Club {
   isActive: boolean;
   createdAt: string;
   category?: ClubCategory;
-  leader?: Pick<User, 'id' | 'name' | 'avatar'>;
+  leader?: Pick<User, "id" | "name" | "avatar">;
   memberCount?: number;
   eventCount?: number;
 }
@@ -59,7 +60,7 @@ export interface ClubMember {
   userId: string;
   isViceLeader: boolean;
   joinedAt: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar' | 'username' | 'email'>;
+  user?: Pick<User, "id" | "name" | "avatar" | "username" | "email">;
 }
 
 export interface ClubAnnouncement {
@@ -86,8 +87,9 @@ export interface Event {
   startTime: string;
   endTime: string;
   checkInEnabled: boolean;
+  checkInCode?: string;
   createdAt: string;
-  club?: Pick<Club, 'id' | 'name' | 'logoUrl'>;
+  club?: Pick<Club, "id" | "name" | "logoUrl">;
   registrationCount?: number;
   isFull?: boolean;
   userRegistration?: EventRegistration;
@@ -101,7 +103,7 @@ export interface EventRegistration {
   registeredAt: string;
   isCancelled: boolean;
   cancelledAt?: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar'>;
+  user?: Pick<User, "id" | "name" | "avatar">;
   event?: Event;
 }
 
@@ -110,7 +112,7 @@ export interface CheckInRecord {
   eventId: string;
   userId: string;
   checkInTime: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar'>;
+  user?: Pick<User, "id" | "name" | "avatar">;
   event?: Event;
 }
 

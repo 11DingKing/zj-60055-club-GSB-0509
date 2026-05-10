@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
-import { ClubsService } from '../clubs/clubs.service';
-import { EventStatus, EventType } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { RedisService } from "../redis/redis.service";
+import { ClubsService } from "../clubs/clubs.service";
+import { EventStatus, EventType } from "@prisma/client";
+import { PointsService } from "../points/points.service";
 
 @Injectable()
 export class EventsService {
@@ -10,6 +16,7 @@ export class EventsService {
     private prisma: PrismaService,
     private redisService: RedisService,
     private clubsService: ClubsService,
+    private pointsService: PointsService,
   ) {}
 
   async findAll(clubId?: string, status?: EventStatus, userId?: string) {
@@ -34,7 +41,7 @@ export class EventsService {
         },
       },
       orderBy: {
-        startTime: 'desc',
+        startTime: "desc",
       },
     });
 
@@ -77,15 +84,17 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     let userRegistration = null;
     let userCheckIn = null;
 
     if (userId) {
-      userRegistration = event.registrations.find((r) => r.userId === userId) || null;
-      userCheckIn = event.checkInRecords.find((c) => c.userId === userId) || null;
+      userRegistration =
+        event.registrations.find((r) => r.userId === userId) || null;
+      userCheckIn =
+        event.checkInRecords.find((c) => c.userId === userId) || null;
     }
 
     const registrationCount = await this.getRegistrationCount(id);
@@ -101,10 +110,14 @@ export class EventsService {
     };
   }
 
+  generateCheckInCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
   async create(clubId: string, userId: string, createEventDto: any) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能创建活动');
+      throw new ForbiddenException("只有社团负责人才能创建活动");
     }
 
     const now = new Date();
@@ -113,11 +126,11 @@ export class EventsService {
     const endTime = new Date(createEventDto.endTime);
 
     if (registrationDeadline >= startTime) {
-      throw new ConflictException('报名截止时间必须早于活动开始时间');
+      throw new ConflictException("报名截止时间必须早于活动开始时间");
     }
 
     if (startTime >= endTime) {
-      throw new ConflictException('活动开始时间必须早于结束时间');
+      throw new ConflictException("活动开始时间必须早于结束时间");
     }
 
     let status: EventStatus = EventStatus.REGISTERING;
@@ -144,6 +157,7 @@ export class EventsService {
         startTime,
         endTime,
         status,
+        checkInCode: this.generateCheckInCode(),
       },
       include: {
         club: {
@@ -152,13 +166,20 @@ export class EventsService {
       },
     });
 
+    await this.pointsService.award(userId, 20, `创建活动：${event.name}`);
+
     return event;
   }
 
-  async update(clubId: string, id: string, userId: string, updateEventDto: any) {
+  async update(
+    clubId: string,
+    id: string,
+    userId: string,
+    updateEventDto: any,
+  ) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能修改活动');
+      throw new ForbiddenException("只有社团负责人才能修改活动");
     }
 
     const event = await this.prisma.event.findUnique({
@@ -166,14 +187,17 @@ export class EventsService {
     });
 
     if (!event || event.clubId !== clubId) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const updateData: any = {};
 
-    if (updateEventDto.name !== undefined) updateData.name = updateEventDto.name;
-    if (updateEventDto.location !== undefined) updateData.location = updateEventDto.location;
-    if (updateEventDto.eventType !== undefined) updateData.eventType = updateEventDto.eventType;
+    if (updateEventDto.name !== undefined)
+      updateData.name = updateEventDto.name;
+    if (updateEventDto.location !== undefined)
+      updateData.location = updateEventDto.location;
+    if (updateEventDto.eventType !== undefined)
+      updateData.eventType = updateEventDto.eventType;
     if (updateEventDto.maxParticipants !== undefined)
       updateData.maxParticipants = updateEventDto.maxParticipants;
     if (updateEventDto.description !== undefined)
@@ -181,7 +205,9 @@ export class EventsService {
     if (updateEventDto.coverImageUrl !== undefined)
       updateData.coverImageUrl = updateEventDto.coverImageUrl;
     if (updateEventDto.registrationDeadline !== undefined)
-      updateData.registrationDeadline = new Date(updateEventDto.registrationDeadline);
+      updateData.registrationDeadline = new Date(
+        updateEventDto.registrationDeadline,
+      );
     if (updateEventDto.startTime !== undefined)
       updateData.startTime = new Date(updateEventDto.startTime);
     if (updateEventDto.endTime !== undefined)
@@ -201,7 +227,7 @@ export class EventsService {
   async delete(clubId: string, id: string, userId: string) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能删除活动');
+      throw new ForbiddenException("只有社团负责人才能删除活动");
     }
 
     const event = await this.prisma.event.findUnique({
@@ -209,7 +235,7 @@ export class EventsService {
     });
 
     if (!event || event.clubId !== clubId) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     await this.prisma.$transaction([
@@ -221,7 +247,7 @@ export class EventsService {
 
     await this.redisService.del(`event:registrations:${id}`);
 
-    return { message: '活动已删除' };
+    return { message: "活动已删除" };
   }
 
   async getRegistrationCount(eventId: string): Promise<number> {
@@ -249,17 +275,17 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const now = new Date();
     if (now > event.registrationDeadline) {
-      throw new ConflictException('报名已截止');
+      throw new ConflictException("报名已截止");
     }
 
     const isMember = await this.clubsService.isClubMember(event.clubId, userId);
     if (!isMember) {
-      throw new ForbiddenException('只有社团成员才能报名活动');
+      throw new ForbiddenException("只有社团成员才能报名活动");
     }
 
     return this.prisma.$transaction(async (prisma) => {
@@ -269,7 +295,7 @@ export class EventsService {
 
       if (existingRegistration) {
         if (!existingRegistration.isCancelled) {
-          throw new ConflictException('您已报名该活动');
+          throw new ConflictException("您已报名该活动");
         }
 
         const result = await prisma.eventRegistration.update({
@@ -280,7 +306,11 @@ export class EventsService {
           },
         });
 
-        await this.redisService.hincrby(`event:registrations:${eventId}`, 'count', 1);
+        await this.redisService.hincrby(
+          `event:registrations:${eventId}`,
+          "count",
+          1,
+        );
 
         return result;
       }
@@ -290,7 +320,7 @@ export class EventsService {
       });
 
       if (currentRegistrations >= event.maxParticipants) {
-        throw new ConflictException('活动报名人数已满');
+        throw new ConflictException("活动报名人数已满");
       }
 
       const result = await prisma.eventRegistration.create({
@@ -300,7 +330,11 @@ export class EventsService {
         },
       });
 
-      await this.redisService.hincrby(`event:registrations:${eventId}`, 'count', 1);
+      await this.redisService.hincrby(
+        `event:registrations:${eventId}`,
+        "count",
+        1,
+      );
 
       return result;
     });
@@ -312,12 +346,12 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const now = new Date();
     if (now > event.registrationDeadline) {
-      throw new ConflictException('报名已截止，无法取消');
+      throw new ConflictException("报名已截止，无法取消");
     }
 
     const registration = await this.prisma.eventRegistration.findFirst({
@@ -325,15 +359,31 @@ export class EventsService {
     });
 
     if (!registration) {
-      throw new NotFoundException('您未报名该活动');
+      throw new NotFoundException("您未报名该活动");
     }
+
+    const hasAttended = await this.prisma.attendance.findFirst({
+      where: { eventId, userId },
+    });
 
     const result = await this.prisma.eventRegistration.update({
       where: { id: registration.id },
       data: { isCancelled: true, cancelledAt: now },
     });
 
-    await this.redisService.hincrby(`event:registrations:${eventId}`, 'count', -1);
+    await this.redisService.hincrby(
+      `event:registrations:${eventId}`,
+      "count",
+      -1,
+    );
+
+    if (hasAttended) {
+      await this.pointsService.deduct(
+        userId,
+        5,
+        `退出活动（已签到）：${event.name}`,
+      );
+    }
 
     return result;
   }
@@ -344,17 +394,17 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const isLeader = await this.clubsService.isClubLeader(event.clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能开启签到');
+      throw new ForbiddenException("只有社团负责人才能开启签到");
     }
 
     const now = new Date();
     if (now < event.startTime || now > event.endTime) {
-      throw new ConflictException('只能在活动进行期间开启签到');
+      throw new ConflictException("只能在活动进行期间开启签到");
     }
 
     return this.prisma.event.update({
@@ -369,11 +419,11 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     if (!event.checkInEnabled) {
-      throw new ConflictException('活动签到尚未开启');
+      throw new ConflictException("活动签到尚未开启");
     }
 
     const registration = await this.prisma.eventRegistration.findFirst({
@@ -381,7 +431,7 @@ export class EventsService {
     });
 
     if (!registration) {
-      throw new ForbiddenException('您未报名该活动，无法签到');
+      throw new ForbiddenException("您未报名该活动，无法签到");
     }
 
     const existingCheckIn = await this.prisma.checkInRecord.findFirst({
@@ -389,7 +439,7 @@ export class EventsService {
     });
 
     if (existingCheckIn) {
-      throw new ConflictException('您已签到');
+      throw new ConflictException("您已签到");
     }
 
     return this.prisma.checkInRecord.create({
@@ -406,12 +456,12 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const isLeader = await this.clubsService.isClubLeader(event.clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能查看签到统计');
+      throw new ForbiddenException("只有社团负责人才能查看签到统计");
     }
 
     const [registrations, checkIns] = await Promise.all([
@@ -426,7 +476,8 @@ export class EventsService {
     return {
       totalRegistrations: registrations,
       checkedIn: checkIns,
-      checkInRate: registrations > 0 ? Math.round((checkIns / registrations) * 100) : 0,
+      checkInRate:
+        registrations > 0 ? Math.round((checkIns / registrations) * 100) : 0,
     };
   }
 
@@ -440,17 +491,17 @@ export class EventsService {
     });
 
     if (!event) {
-      throw new NotFoundException('活动不存在');
+      throw new NotFoundException("活动不存在");
     }
 
     const isLeader = await this.clubsService.isClubLeader(event.clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能发布活动总结');
+      throw new ForbiddenException("只有社团负责人才能发布活动总结");
     }
 
     const now = new Date();
     if (now < event.endTime) {
-      throw new ConflictException('活动未结束，无法发布总结');
+      throw new ConflictException("活动未结束，无法发布总结");
     }
 
     const existingSummary = await this.prisma.eventSummary.findUnique({

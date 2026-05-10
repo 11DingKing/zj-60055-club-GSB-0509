@@ -8,6 +8,8 @@ import { EventsModule } from './events/events.module';
 import { RedisModule } from './redis/redis.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { PointsModule } from './points/points.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -22,6 +24,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     UsersModule,
     ClubsModule,
     EventsModule,
+    AttendanceModule,
+    PointsModule,
     StatisticsModule,
   ],
   providers: [

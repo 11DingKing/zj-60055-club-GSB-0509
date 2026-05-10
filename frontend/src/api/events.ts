@@ -1,9 +1,9 @@
-import request from '@/utils/request';
-import { Event, EventStatus } from '@/types';
+import request from "@/utils/request";
+import { Event, EventStatus } from "@/types";
 
 export const eventsApi = {
   getEvents: (params?: { clubId?: string; status?: EventStatus }) => {
-    return request.get<Event[]>('/events', { params });
+    return request.get<Event[]>("/events", { params });
   },
 
   getEventById: (id: string) => {
@@ -22,7 +22,7 @@ export const eventsApi = {
     startTime: string;
     endTime: string;
   }) => {
-    return request.post<Event>('/events', data);
+    return request.post<Event>("/events", data);
   },
 
   updateEvent: (id: string, data: any) => {
@@ -53,7 +53,22 @@ export const eventsApi = {
     return request.get(`/events/${id}/checkin-stats`);
   },
 
-  createSummary: (id: string, data: { content: string; photoUrls: string[] }) => {
+  createSummary: (
+    id: string,
+    data: { content: string; photoUrls: string[] },
+  ) => {
     return request.post(`/events/${id}/summary`, data);
+  },
+
+  regenerateCheckInCode: (id: string) => {
+    return request.post(`/attendance/${id}/regenerate-code`);
+  },
+
+  checkInWithCode: (id: string, code: string) => {
+    return request.post(`/attendance/${id}/checkin`, { code });
+  },
+
+  getEventAttendance: (id: string) => {
+    return request.get(`/attendance/${id}`);
   },
 };
