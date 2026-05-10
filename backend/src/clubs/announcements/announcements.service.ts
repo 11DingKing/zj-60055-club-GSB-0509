@@ -1,20 +1,26 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ClubsService } from '../clubs.service';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { ClubsService } from "../clubs.service";
+import { PointsService } from "../../points/points.service";
 
 @Injectable()
 export class AnnouncementsService {
   constructor(
     private prisma: PrismaService,
     private clubsService: ClubsService,
+    private pointsService: PointsService,
   ) {}
 
   async findByClub(clubId: string) {
     return this.prisma.clubAnnouncement.findMany({
       where: { clubId },
       orderBy: {
-        isPinned: 'desc',
-        publishedAt: 'desc',
+        isPinned: "desc",
+        publishedAt: "desc",
       },
     });
   }
@@ -25,7 +31,7 @@ export class AnnouncementsService {
     });
 
     if (!announcement || announcement.clubId !== clubId) {
-      throw new NotFoundException('公告不存在');
+      throw new NotFoundException("公告不存在");
     }
 
     return announcement;
@@ -34,10 +40,10 @@ export class AnnouncementsService {
   async create(clubId: string, userId: string, createAnnouncementDto: any) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能发布公告');
+      throw new ForbiddenException("只有社团负责人才能发布公告");
     }
 
-    return this.prisma.clubAnnouncement.create({
+    const announcement = await this.prisma.clubAnnouncement.create({
       data: {
         clubId,
         title: createAnnouncementDto.title,
@@ -45,12 +51,25 @@ export class AnnouncementsService {
         isPinned: createAnnouncementDto.isPinned || false,
       },
     });
+
+    await this.pointsService.award(
+      userId,
+      5,
+      `发布公告：${announcement.title}`,
+    );
+
+    return announcement;
   }
 
-  async update(clubId: string, id: string, userId: string, updateAnnouncementDto: any) {
+  async update(
+    clubId: string,
+    id: string,
+    userId: string,
+    updateAnnouncementDto: any,
+  ) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能修改公告');
+      throw new ForbiddenException("只有社团负责人才能修改公告");
     }
 
     const announcement = await this.prisma.clubAnnouncement.findUnique({
@@ -58,7 +77,7 @@ export class AnnouncementsService {
     });
 
     if (!announcement || announcement.clubId !== clubId) {
-      throw new NotFoundException('公告不存在');
+      throw new NotFoundException("公告不存在");
     }
 
     return this.prisma.clubAnnouncement.update({
@@ -74,7 +93,7 @@ export class AnnouncementsService {
   async remove(clubId: string, id: string, userId: string) {
     const isLeader = await this.clubsService.isClubLeader(clubId, userId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能删除公告');
+      throw new ForbiddenException("只有社团负责人才能删除公告");
     }
 
     const announcement = await this.prisma.clubAnnouncement.findUnique({
@@ -82,7 +101,7 @@ export class AnnouncementsService {
     });
 
     if (!announcement || announcement.clubId !== clubId) {
-      throw new NotFoundException('公告不存在');
+      throw new NotFoundException("公告不存在");
     }
 
     return this.prisma.clubAnnouncement.delete({
