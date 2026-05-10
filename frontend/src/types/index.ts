@@ -1,22 +1,30 @@
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  CLUB_LEADER = 'CLUB_LEADER',
-  MEMBER = 'MEMBER',
+  ADMIN = "ADMIN",
+  CLUB_LEADER = "CLUB_LEADER",
+  MEMBER = "MEMBER",
 }
 
 export enum EventType {
-  LECTURE = 'LECTURE',
-  COMPETITION = 'COMPETITION',
-  GATHERING = 'GATHERING',
-  VOLUNTEER = 'VOLUNTEER',
-  TRAINING = 'TRAINING',
+  LECTURE = "LECTURE",
+  COMPETITION = "COMPETITION",
+  GATHERING = "GATHERING",
+  VOLUNTEER = "VOLUNTEER",
+  TRAINING = "TRAINING",
 }
 
 export enum EventStatus {
-  REGISTERING = 'REGISTERING',
-  REGISTRATION_CLOSED = 'REGISTRATION_CLOSED',
-  ONGOING = 'ONGOING',
-  ENDED = 'ENDED',
+  REGISTERING = "REGISTERING",
+  REGISTRATION_CLOSED = "REGISTRATION_CLOSED",
+  ONGOING = "ONGOING",
+  ENDED = "ENDED",
+}
+
+export enum PointsType {
+  CREATE_EVENT = "CREATE_EVENT",
+  CHECK_IN = "CHECK_IN",
+  PUBLISH_ANNOUNCEMENT = "PUBLISH_ANNOUNCEMENT",
+  KICKED_FROM_CLUB = "KICKED_FROM_CLUB",
+  CANCEL_CHECKED_IN_REGISTRATION = "CANCEL_CHECKED_IN_REGISTRATION",
 }
 
 export interface User {
@@ -27,6 +35,7 @@ export interface User {
   phone?: string;
   role: UserRole;
   avatar?: string;
+  points?: number;
   createdAt: string;
 }
 
@@ -48,7 +57,7 @@ export interface Club {
   isActive: boolean;
   createdAt: string;
   category?: ClubCategory;
-  leader?: Pick<User, 'id' | 'name' | 'avatar'>;
+  leader?: Pick<User, "id" | "name" | "avatar">;
   memberCount?: number;
   eventCount?: number;
 }
@@ -59,7 +68,7 @@ export interface ClubMember {
   userId: string;
   isViceLeader: boolean;
   joinedAt: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar' | 'username' | 'email'>;
+  user?: Pick<User, "id" | "name" | "avatar" | "username" | "email">;
 }
 
 export interface ClubAnnouncement {
@@ -86,12 +95,14 @@ export interface Event {
   startTime: string;
   endTime: string;
   checkInEnabled: boolean;
+  checkInCode?: string;
   createdAt: string;
-  club?: Pick<Club, 'id' | 'name' | 'logoUrl'>;
+  club?: Pick<Club, "id" | "name" | "logoUrl">;
   registrationCount?: number;
   isFull?: boolean;
   userRegistration?: EventRegistration;
   userCheckIn?: CheckInRecord;
+  userAttendance?: Attendance;
 }
 
 export interface EventRegistration {
@@ -101,7 +112,7 @@ export interface EventRegistration {
   registeredAt: string;
   isCancelled: boolean;
   cancelledAt?: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar'>;
+  user?: Pick<User, "id" | "name" | "avatar">;
   event?: Event;
 }
 
@@ -110,7 +121,7 @@ export interface CheckInRecord {
   eventId: string;
   userId: string;
   checkInTime: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar'>;
+  user?: Pick<User, "id" | "name" | "avatar">;
   event?: Event;
 }
 
@@ -156,4 +167,37 @@ export interface DashboardStats {
     checkedIn: number;
     checkInRate: number;
   }[];
+}
+
+export interface Attendance {
+  id: string;
+  eventId: string;
+  userId: string;
+  checkInCode: string;
+  checkedInAt: string;
+  event?: { id: string; name: string };
+  user?: Pick<User, "id" | "name" | "avatar">;
+}
+
+export interface PointsLog {
+  id: string;
+  userId: string;
+  type: PointsType;
+  amount: number;
+  reason: string;
+  createdAt: string;
+}
+
+export interface PointsInfo {
+  id: string;
+  name: string;
+  points: number;
+}
+
+export interface PointsLogPage {
+  data: PointsLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }

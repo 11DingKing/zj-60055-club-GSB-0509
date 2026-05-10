@@ -53,6 +53,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '个人中心' },
       },
       {
+        path: 'my-points',
+        name: 'MyPoints',
+        component: () => import('@/views/my-points/index.vue'),
+        meta: { title: '我的积分' },
+      },
+      {
         path: 'admin/dashboard',
         name: 'AdminDashboard',
         component: () => import('@/views/admin/dashboard.vue'),
