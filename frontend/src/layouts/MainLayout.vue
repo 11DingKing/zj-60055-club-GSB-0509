@@ -39,6 +39,7 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+              <el-dropdown-item command="points">我的积分</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -89,6 +90,8 @@ const getRoleTagType = (role?: UserRole): string => {
 const handleCommand = (command: string) => {
   if (command === 'profile') {
     router.push('/profile');
+  } else if (command === 'points') {
+    router.push('/my-points');
   } else if (command === 'logout') {
     userStore.logout();
     router.push('/login');

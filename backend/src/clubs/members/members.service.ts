@@ -1,13 +1,20 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ClubsService } from '../clubs.service';
-import { UserRole } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+} from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
+import { ClubsService } from "../clubs.service";
+import { PointsService } from "../../points/points.service";
+import { UserRole } from "@prisma/client";
 
 @Injectable()
 export class MembersService {
   constructor(
     private prisma: PrismaService,
     private clubsService: ClubsService,
+    private pointsService: PointsService,
   ) {}
 
   async findByClub(clubId: string) {
@@ -15,12 +22,18 @@ export class MembersService {
       where: { clubId },
       include: {
         user: {
-          select: { id: true, name: true, username: true, avatar: true, email: true },
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            avatar: true,
+            email: true,
+          },
         },
       },
       orderBy: {
-        isViceLeader: 'desc',
-        joinedAt: 'asc',
+        isViceLeader: "desc",
+        joinedAt: "asc",
       },
     });
   }
@@ -28,7 +41,7 @@ export class MembersService {
   async invite(clubId: string, userId: string, inviterId: string) {
     const isLeader = await this.clubsService.isClubLeader(clubId, inviterId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能邀请成员');
+      throw new ForbiddenException("只有社团负责人才能邀请成员");
     }
 
     const existingMember = await this.prisma.clubMember.findFirst({
@@ -36,7 +49,7 @@ export class MembersService {
     });
 
     if (existingMember) {
-      throw new ConflictException('该用户已是社团成员');
+      throw new ConflictException("该用户已是社团成员");
     }
 
     return this.prisma.clubMember.create({
@@ -52,7 +65,7 @@ export class MembersService {
   async remove(clubId: string, userId: string, operatorId: string) {
     const isLeader = await this.clubsService.isClubLeader(clubId, operatorId);
     if (!isLeader) {
-      throw new ForbiddenException('只有社团负责人才能移除成员');
+      throw new ForbiddenException("只有社团负责人才能移除成员");
     }
 
     const member = await this.prisma.clubMember.findFirst({
@@ -60,7 +73,7 @@ export class MembersService {
     });
 
     if (!member) {
-      throw new NotFoundException('该用户不是社团成员');
+      throw new NotFoundException("该用户不是社团成员");
     }
 
     if (member.isViceLeader) {
@@ -68,30 +81,48 @@ export class MembersService {
         where: { id: clubId },
       });
       if (club?.leaderId === userId) {
-        throw new ForbiddenException('不能移除社团负责人');
+        throw new ForbiddenException("不能移除社团负责人");
       }
     }
 
-    return this.prisma.clubMember.delete({
+    const club = await this.prisma.club.findUnique({ where: { id: clubId } });
+
+    const result = await this.prisma.clubMember.delete({
       where: { id: member.id },
     });
+
+    if (club) {
+      await this.pointsService.deduct(
+        userId,
+        "KICKED_FROM_CLUB",
+        30,
+        `被踢出社团: ${club.name}`,
+      );
+    }
+
+    return result;
   }
 
-  async setViceLeader(clubId: string, userId: string, operatorId: string, isViceLeader: boolean) {
+  async setViceLeader(
+    clubId: string,
+    userId: string,
+    operatorId: string,
+    isViceLeader: boolean,
+  ) {
     const club = await this.prisma.club.findUnique({
       where: { id: clubId },
     });
 
     if (!club) {
-      throw new NotFoundException('社团不存在');
+      throw new NotFoundException("社团不存在");
     }
 
     if (club.leaderId !== operatorId) {
-      throw new ForbiddenException('只有社团负责人才能设置副负责人');
+      throw new ForbiddenException("只有社团负责人才能设置副负责人");
     }
 
     if (club.leaderId === userId) {
-      throw new ForbiddenException('不能修改社团负责人的角色');
+      throw new ForbiddenException("不能修改社团负责人的角色");
     }
 
     const member = await this.prisma.clubMember.findFirst({
@@ -99,7 +130,7 @@ export class MembersService {
     });
 
     if (!member) {
-      throw new NotFoundException('该用户不是社团成员');
+      throw new NotFoundException("该用户不是社团成员");
     }
 
     return this.prisma.clubMember.update({
@@ -119,7 +150,7 @@ export class MembersService {
     });
 
     if (existingMember) {
-      throw new ConflictException('您已是社团成员');
+      throw new ConflictException("您已是社团成员");
     }
 
     return this.prisma.clubMember.create({

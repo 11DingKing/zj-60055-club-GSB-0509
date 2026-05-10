@@ -9,7 +9,10 @@
             </el-avatar>
             <div class="user-basic-info">
               <h2 class="user-name">{{ userStore.userInfo?.name }}</h2>
-              <el-tag :type="getRoleTagType(userStore.userInfo?.role)" size="large">
+              <el-tag
+                :type="getRoleTagType(userStore.userInfo?.role)"
+                size="large"
+              >
                 {{ getRoleText(userStore.userInfo?.role) }}
               </el-tag>
             </div>
@@ -21,17 +24,36 @@
             </div>
             <div class="info-item">
               <span class="info-label">邮箱</span>
-              <span class="info-value">{{ userStore.userInfo?.email || '未设置' }}</span>
+              <span class="info-value">{{
+                userStore.userInfo?.email || "未设置"
+              }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">电话</span>
-              <span class="info-value">{{ userStore.userInfo?.phone || '未设置' }}</span>
+              <span class="info-value">{{
+                userStore.userInfo?.phone || "未设置"
+              }}</span>
             </div>
             <div class="info-item">
               <span class="info-label">注册时间</span>
-              <span class="info-value">{{ formatDate(userStore.userInfo?.createdAt) }}</span>
+              <span class="info-value">{{
+                formatDate(userStore.userInfo?.createdAt)
+              }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">当前积分</span>
+              <span class="info-value points-value">
+                <strong>{{ userStore.userInfo?.points ?? 0 }}</strong> 分
+              </span>
             </div>
           </div>
+          <el-button
+            type="primary"
+            style="width: 100%; margin-top: 16px"
+            @click="goToPoints"
+          >
+            查看积分明细
+          </el-button>
         </el-card>
       </el-col>
 
@@ -47,24 +69,39 @@
                   @click="goToEvent(reg.eventId)"
                 >
                   <div class="record-left">
-                    <el-avatar :size="48" :src="reg.event?.coverImageUrl" v-if="reg.event">
+                    <el-avatar
+                      :size="48"
+                      :src="reg.event?.coverImageUrl"
+                      v-if="reg.event"
+                    >
                       {{ reg.event?.name?.charAt(0) }}
                     </el-avatar>
                     <div class="record-info">
-                      <h4 class="record-title">{{ reg.event?.name || '活动已删除' }}</h4>
+                      <h4 class="record-title">
+                        {{ reg.event?.name || "活动已删除" }}
+                      </h4>
                       <p class="record-meta">
-                        <span>报名时间：{{ formatDateTime(reg.registeredAt) }}</span>
-                        <span v-if="reg.isCancelled" style="color: #f56c6c">已取消</span>
+                        <span
+                          >报名时间：{{
+                            formatDateTime(reg.registeredAt)
+                          }}</span
+                        >
+                        <span v-if="reg.isCancelled" style="color: #f56c6c"
+                          >已取消</span
+                        >
                       </p>
                     </div>
                   </div>
                   <div class="record-right">
                     <el-tag :type="reg.isCancelled ? 'info' : 'success'">
-                      {{ reg.isCancelled ? '已取消' : '已报名' }}
+                      {{ reg.isCancelled ? "已取消" : "已报名" }}
                     </el-tag>
                   </div>
                 </div>
-                <el-empty v-if="registrations.length === 0" description="暂无报名记录" />
+                <el-empty
+                  v-if="registrations.length === 0"
+                  description="暂无报名记录"
+                />
               </div>
             </el-tab-pane>
 
@@ -77,11 +114,17 @@
                   @click="goToEvent(checkin.eventId)"
                 >
                   <div class="record-left">
-                    <el-avatar :size="48" :src="checkin.event?.coverImageUrl" v-if="checkin.event">
+                    <el-avatar
+                      :size="48"
+                      :src="checkin.event?.coverImageUrl"
+                      v-if="checkin.event"
+                    >
                       {{ checkin.event?.name?.charAt(0) }}
                     </el-avatar>
                     <div class="record-info">
-                      <h4 class="record-title">{{ checkin.event?.name || '活动已删除' }}</h4>
+                      <h4 class="record-title">
+                        {{ checkin.event?.name || "活动已删除" }}
+                      </h4>
                       <p class="record-meta">
                         签到时间：{{ formatDateTime(checkin.checkInTime) }}
                       </p>
@@ -94,7 +137,10 @@
                     </el-tag>
                   </div>
                 </div>
-                <el-empty v-if="checkins.length === 0" description="暂无签到记录" />
+                <el-empty
+                  v-if="checkins.length === 0"
+                  description="暂无签到记录"
+                />
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -105,56 +151,56 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { CircleCheck } from '@element-plus/icons-vue';
-import { usersApi } from '@/api/users';
-import { EventRegistration, CheckInRecord, UserRole } from '@/types';
-import { useUserStore } from '@/stores/user';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import { CircleCheck } from "@element-plus/icons-vue";
+import { usersApi } from "@/api/users";
+import { EventRegistration, CheckInRecord, UserRole } from "@/types";
+import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
 const userStore = useUserStore();
 
-const activeTab = ref('registrations');
+const activeTab = ref("registrations");
 const registrations = ref<EventRegistration[]>([]);
 const checkins = ref<CheckInRecord[]>([]);
 const loading = ref(false);
 
 const getRoleText = (role?: UserRole): string => {
   const roleMap: Record<UserRole, string> = {
-    [UserRole.ADMIN]: '系统管理员',
-    [UserRole.CLUB_LEADER]: '社团负责人',
-    [UserRole.MEMBER]: '普通成员',
+    [UserRole.ADMIN]: "系统管理员",
+    [UserRole.CLUB_LEADER]: "社团负责人",
+    [UserRole.MEMBER]: "普通成员",
   };
-  return role ? roleMap[role] : '';
+  return role ? roleMap[role] : "";
 };
 
 const getRoleTagType = (role?: UserRole): string => {
   const typeMap: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'danger',
-    [UserRole.CLUB_LEADER]: 'primary',
-    [UserRole.MEMBER]: 'info',
+    [UserRole.ADMIN]: "danger",
+    [UserRole.CLUB_LEADER]: "primary",
+    [UserRole.MEMBER]: "info",
   };
-  return role ? typeMap[role] : 'info';
+  return role ? typeMap[role] : "info";
 };
 
 const formatDate = (date?: string): string => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 };
 
 const formatDateTime = (date: string): string => {
-  return new Date(date).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Date(date).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -163,7 +209,7 @@ const fetchRegistrations = async () => {
     const res = await usersApi.getMyRegistrations();
     registrations.value = res.data;
   } catch (error) {
-    ElMessage.error('获取报名记录失败');
+    ElMessage.error("获取报名记录失败");
   }
 };
 
@@ -172,12 +218,16 @@ const fetchCheckins = async () => {
     const res = await usersApi.getMyCheckIns();
     checkins.value = res.data;
   } catch (error) {
-    ElMessage.error('获取签到记录失败');
+    ElMessage.error("获取签到记录失败");
   }
 };
 
 const goToEvent = (eventId: string) => {
   router.push(`/event/${eventId}`);
+};
+
+const goToPoints = () => {
+  router.push("/my-points");
 };
 
 onMounted(() => {
@@ -284,5 +334,10 @@ onMounted(() => {
   color: #909399;
   display: flex;
   gap: 20px;
+}
+
+.points-value strong {
+  font-size: 18px;
+  color: #e6a23c;
 }
 </style>

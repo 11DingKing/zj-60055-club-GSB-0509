@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User, UserRole } from '@prisma/client';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { User, UserRole } from "@prisma/client";
 
 @Injectable()
 export class UsersService {
@@ -16,6 +20,7 @@ export class UsersService {
         phone: true,
         role: true,
         avatar: true,
+        points: true,
         createdAt: true,
       },
     });
@@ -33,6 +38,7 @@ export class UsersService {
         phone: true,
         role: true,
         avatar: true,
+        points: true,
         createdAt: true,
         memberships: {
           include: {
@@ -44,7 +50,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('用户不存在');
+      throw new NotFoundException("用户不存在");
     }
 
     return user;
@@ -52,7 +58,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: Partial<User>, currentUser: any) {
     if (currentUser.id !== id && currentUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('无权限修改此用户');
+      throw new ForbiddenException("无权限修改此用户");
     }
 
     const user = await this.prisma.user.update({
@@ -66,6 +72,7 @@ export class UsersService {
         phone: true,
         role: true,
         avatar: true,
+        points: true,
         createdAt: true,
       },
     });
@@ -87,7 +94,7 @@ export class UsersService {
         },
       },
       orderBy: {
-        registeredAt: 'desc',
+        registeredAt: "desc",
       },
     });
 
@@ -105,7 +112,7 @@ export class UsersService {
         },
       },
       orderBy: {
-        checkInTime: 'desc',
+        checkInTime: "desc",
       },
     });
 

@@ -1,6 +1,12 @@
 <template>
   <div class="event-detail-page" v-loading="loading">
-    <el-button v-if="event" type="primary" text @click="goBack" style="margin-bottom: 20px">
+    <el-button
+      v-if="event"
+      type="primary"
+      text
+      @click="goBack"
+      style="margin-bottom: 20px"
+    >
       <el-icon><ArrowLeft /></el-icon>
       返回
     </el-button>
@@ -10,8 +16,26 @@
         <div class="card-header">
           <h2 class="event-title">{{ event.name }}</h2>
           <div class="event-actions" v-if="canManageEvent">
-            <el-button type="primary" @click="handleEnableCheckIn" :disabled="event.checkInEnabled">
-              {{ event.checkInEnabled ? '已开启签到' : '开启签到' }}
+            <el-button
+              type="primary"
+              @click="handleEnableCheckIn"
+              :disabled="event.checkInEnabled"
+            >
+              {{ event.checkInEnabled ? "已开启签到" : "开启签到" }}
+            </el-button>
+            <el-button
+              type="warning"
+              @click="handleGenerateCheckInCode"
+              v-if="!event.checkInCode"
+            >
+              生成签到码
+            </el-button>
+            <el-button
+              type="warning"
+              @click="handleRegenerateCheckInCode"
+              v-else
+            >
+              重新生成签到码
             </el-button>
           </div>
         </div>
@@ -19,11 +43,19 @@
 
       <div class="event-content">
         <div class="event-cover-large">
-          <img v-if="event.coverImageUrl" :src="event.coverImageUrl" :alt="event.name" />
+          <img
+            v-if="event.coverImageUrl"
+            :src="event.coverImageUrl"
+            :alt="event.name"
+          />
           <div v-else class="cover-placeholder-large">
             <el-icon size="64"><Calendar /></el-icon>
           </div>
-          <el-tag :type="getStatusTagType(event.status)" size="large" class="status-badge">
+          <el-tag
+            :type="getStatusTagType(event.status)"
+            size="large"
+            class="status-badge"
+          >
             {{ getStatusText(event.status) }}
           </el-tag>
         </div>
@@ -35,21 +67,79 @@
               <div class="rich-text" v-html="event.description"></div>
             </div>
 
-            <div class="event-section" v-if="event.userRegistration && !event.userRegistration.isCancelled">
+            <div
+              class="event-section"
+              v-if="canManageEvent && event.checkInCode"
+            >
+              <h3 class="section-title">签到码</h3>
+              <div class="checkin-code-display">
+                <span class="code-text">{{ event.checkInCode }}</span>
+                <el-button type="primary" text @click="copyCheckInCode"
+                  >复制</el-button
+                >
+              </div>
+              <p class="code-hint">
+                请将此签到码告知活动参与者，参与者在签到窗口内输入签到码完成签到
+              </p>
+            </div>
+
+            <div
+              class="event-section"
+              v-if="
+                event.userRegistration && !event.userRegistration.isCancelled
+              "
+            >
               <h3 class="section-title">我的签到</h3>
-              <el-alert v-if="event.checkInEnabled" type="info" show-icon style="margin-bottom: 16px">
-                <template #title>签到已开启</template>
-                请在活动现场点击签到
-              </el-alert>
-              <div v-if="event.userCheckIn">
+              <div v-if="event.userAttendance">
                 <el-tag type="success" size="large">
                   <el-icon><CircleCheck /></el-icon>
                   已签到
                 </el-tag>
-                <p class="checkin-time">签到时间：{{ formatDateTime(event.userCheckIn.checkInTime) }}</p>
+                <p class="checkin-time">
+                  签到时间：{{
+                    formatDateTime(event.userAttendance.checkedInAt)
+                  }}
+                </p>
+              </div>
+              <div v-else-if="isInCheckInWindow">
+                <el-alert type="info" show-icon style="margin-bottom: 16px">
+                  <template #title>签到时间窗口已开启</template>
+                  请输入管理员提供的6位签到码完成签到
+                </el-alert>
+                <div class="checkin-code-form">
+                  <el-input
+                    v-model="checkInCodeInput"
+                    placeholder="请输入6位签到码"
+                    maxlength="6"
+                    style="width: 200px; margin-right: 12px"
+                    size="large"
+                    @keyup.enter="handleCheckInWithCode"
+                  />
+                  <el-button
+                    type="primary"
+                    size="large"
+                    @click="handleCheckInWithCode"
+                    :loading="checkInSubmitting"
+                    :disabled="checkInCodeInput.length !== 6"
+                  >
+                    <el-icon><CircleCheck /></el-icon>
+                    签到
+                  </el-button>
+                </div>
+              </div>
+              <div v-else-if="event.userCheckIn">
+                <el-tag type="success" size="large">
+                  <el-icon><CircleCheck /></el-icon>
+                  已签到（旧系统）
+                </el-tag>
+                <p class="checkin-time">
+                  签到时间：{{ formatDateTime(event.userCheckIn.checkInTime) }}
+                </p>
               </div>
               <el-button
-                v-else-if="event.checkInEnabled && event.status === EventStatus.ONGOING"
+                v-else-if="
+                  event.checkInEnabled && event.status === EventStatus.ONGOING
+                "
                 type="primary"
                 size="large"
                 @click="handleCheckIn"
@@ -57,14 +147,22 @@
                 <el-icon><Location /></el-icon>
                 立即签到
               </el-button>
-              <el-tag v-else type="info">签到尚未开启</el-tag>
+              <el-tag v-else type="info">不在签到时间窗口内</el-tag>
             </div>
 
-            <div class="event-section" v-if="event.status === EventStatus.ENDED">
+            <div
+              class="event-section"
+              v-if="event.status === EventStatus.ENDED"
+            >
               <h3 class="section-title">活动总结</h3>
               <div v-if="eventSummary" class="summary-content">
                 <div class="rich-text" v-html="eventSummary.content"></div>
-                <div class="photo-wall" v-if="eventSummary.photoUrls && eventSummary.photoUrls.length > 0">
+                <div
+                  class="photo-wall"
+                  v-if="
+                    eventSummary.photoUrls && eventSummary.photoUrls.length > 0
+                  "
+                >
                   <h4>照片墙</h4>
                   <el-image
                     v-for="(url, index) in eventSummary.photoUrls"
@@ -80,7 +178,7 @@
 
               <div v-if="canManageEvent" style="margin-top: 20px">
                 <el-button type="primary" @click="showSummaryDialog = true">
-                  {{ eventSummary ? '编辑总结' : '发布总结' }}
+                  {{ eventSummary ? "编辑总结" : "发布总结" }}
                 </el-button>
               </div>
             </div>
@@ -103,45 +201,82 @@
                   </div>
                   <div class="info-item">
                     <span class="info-label">开始时间</span>
-                    <span class="info-value">{{ formatDateTime(event.startTime) }}</span>
+                    <span class="info-value">{{
+                      formatDateTime(event.startTime)
+                    }}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">结束时间</span>
-                    <span class="info-value">{{ formatDateTime(event.endTime) }}</span>
+                    <span class="info-value">{{
+                      formatDateTime(event.endTime)
+                    }}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">报名截止</span>
-                    <span class="info-value">{{ formatDateTime(event.registrationDeadline) }}</span>
+                    <span class="info-value">{{
+                      formatDateTime(event.registrationDeadline)
+                    }}</span>
                   </div>
                   <div class="info-item">
                     <span class="info-label">报名人数</span>
                     <span class="info-value">
-                      <strong>{{ event.registrationCount || 0 }}</strong> / {{ event.maxParticipants }} 人
+                      <strong>{{ event.registrationCount || 0 }}</strong> /
+                      {{ event.maxParticipants }} 人
                     </span>
                   </div>
                 </div>
 
                 <div class="progress-section">
                   <el-progress
-                    :percentage="Math.min(((event.registrationCount || 0) / event.maxParticipants) * 100, 100)"
+                    :percentage="
+                      Math.min(
+                        ((event.registrationCount || 0) /
+                          event.maxParticipants) *
+                          100,
+                        100,
+                      )
+                    "
                     :status="event.isFull ? 'exception' : ''"
                   />
-                  <p class="progress-tip">{{ event.isFull ? '名额已满' : '还剩 ' + (event.maxParticipants - (event.registrationCount || 0)) + ' 个名额' }}</p>
+                  <p class="progress-tip">
+                    {{
+                      event.isFull
+                        ? "名额已满"
+                        : "还剩 " +
+                          (event.maxParticipants -
+                            (event.registrationCount || 0)) +
+                          " 个名额"
+                    }}
+                  </p>
                 </div>
 
                 <div class="action-buttons">
-                  <template v-if="!event.userRegistration || event.userRegistration.isCancelled">
+                  <template
+                    v-if="
+                      !event.userRegistration ||
+                      event.userRegistration.isCancelled
+                    "
+                  >
                     <el-button
                       type="primary"
                       size="large"
                       style="width: 100%"
-                      :disabled="event.status !== EventStatus.REGISTERING || event.isFull"
+                      :disabled="
+                        event.status !== EventStatus.REGISTERING || event.isFull
+                      "
                       @click="handleRegister"
                     >
                       立即报名
                     </el-button>
-                    <p v-if="event.status !== EventStatus.REGISTERING" class="action-tip">
-                      {{ event.status === EventStatus.REGISTRATION_CLOSED ? '报名已截止' : '活动已结束' }}
+                    <p
+                      v-if="event.status !== EventStatus.REGISTERING"
+                      class="action-tip"
+                    >
+                      {{
+                        event.status === EventStatus.REGISTRATION_CLOSED
+                          ? "报名已截止"
+                          : "活动已结束"
+                      }}
                     </p>
                     <p v-else-if="event.isFull" class="action-tip">名额已满</p>
                   </template>
@@ -156,8 +291,16 @@
                     >
                       取消报名
                     </el-button>
-                    <p v-if="event.status !== EventStatus.REGISTERING" class="action-tip">报名截止后不可取消</p>
-                    <el-tag type="success" style="margin-top: 10px; width: 100%; text-align: center">
+                    <p
+                      v-if="event.status !== EventStatus.REGISTERING"
+                      class="action-tip"
+                    >
+                      报名截止后不可取消
+                    </p>
+                    <el-tag
+                      type="success"
+                      style="margin-top: 10px; width: 100%; text-align: center"
+                    >
                       已报名
                     </el-tag>
                   </template>
@@ -183,7 +326,9 @@
                 <div class="checkin-stats" v-if="checkinStats">
                   <div class="stat-item">
                     <span class="stat-label">报名人数</span>
-                    <span class="stat-value">{{ checkinStats.totalRegistrations }}</span>
+                    <span class="stat-value">{{
+                      checkinStats.totalRegistrations
+                    }}</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-label">已签到</span>
@@ -191,11 +336,15 @@
                   </div>
                   <div class="stat-item">
                     <span class="stat-label">签到率</span>
-                    <span class="stat-value rate">{{ (checkinStats.checkInRate * 100).toFixed(1) }}%</span>
+                    <span class="stat-value rate"
+                      >{{ (checkinStats.checkInRate * 100).toFixed(1) }}%</span
+                    >
                   </div>
                   <el-progress
                     :percentage="checkinStats.checkInRate * 100"
-                    :color="checkinStats.checkInRate >= 0.8 ? '#67c23a' : '#e6a23c'"
+                    :color="
+                      checkinStats.checkInRate >= 0.8 ? '#67c23a' : '#e6a23c'
+                    "
                     style="margin-top: 10px"
                   />
                 </div>
@@ -209,7 +358,11 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="showSummaryDialog" :title="eventSummary ? '编辑活动总结' : '发布活动总结'" width="600px">
+    <el-dialog
+      v-model="showSummaryDialog"
+      :title="eventSummary ? '编辑活动总结' : '发布活动总结'"
+      width="600px"
+    >
       <el-form :model="summaryForm" label-width="100px">
         <el-form-item label="总结内容">
           <el-input
@@ -246,19 +399,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   ArrowLeft,
   Calendar,
   Location,
-  User,
   CircleCheck,
-} from '@element-plus/icons-vue';
-import { eventsApi } from '@/api/events';
-import { Event, EventStatus, EventType, EventSummary } from '@/types';
-import { useUserStore } from '@/stores/user';
+} from "@element-plus/icons-vue";
+import { eventsApi } from "@/api/events";
+import { attendanceApi } from "@/api/users";
+import { Event, EventStatus, EventType, EventSummary } from "@/types";
+import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
 const router = useRouter();
@@ -276,20 +429,33 @@ const checkinStats = ref<{
 
 const showSummaryDialog = ref(false);
 const summaryForm = ref({
-  content: '',
+  content: "",
   photoUrls: [] as string[],
 });
-const photoUrlsInput = ref('');
+const photoUrlsInput = ref("");
+
+const checkInCodeInput = ref("");
+const checkInSubmitting = ref(false);
 
 watch(photoUrlsInput, (newVal) => {
   summaryForm.value.photoUrls = newVal
-    .split('\n')
-    .map(u => u.trim())
-    .filter(u => u);
+    .split("\n")
+    .map((u) => u.trim())
+    .filter((u) => u);
 });
 
 const canManageEvent = computed(() => {
   return userStore.isAdmin;
+});
+
+const isInCheckInWindow = computed(() => {
+  if (!event.value) return false;
+  const now = new Date();
+  const startTime = new Date(event.value.startTime);
+  const endTime = new Date(event.value.endTime);
+  const windowStart = new Date(startTime.getTime() - 30 * 60 * 1000);
+  const windowEnd = new Date(endTime.getTime() + 30 * 60 * 1000);
+  return now >= windowStart && now <= windowEnd;
 });
 
 const fetchEvent = async () => {
@@ -298,7 +464,7 @@ const fetchEvent = async () => {
     const res = await eventsApi.getEventById(eventId.value);
     event.value = res.data;
   } catch (error) {
-    ElMessage.error('获取活动详情失败');
+    ElMessage.error("获取活动详情失败");
   } finally {
     loading.value = false;
   }
@@ -310,40 +476,40 @@ const fetchCheckInStats = async () => {
     const res = await eventsApi.getCheckInStats(eventId.value);
     checkinStats.value = res.data;
   } catch (error) {
-    console.error('获取签到统计失败', error);
+    console.error("获取签到统计失败", error);
   }
 };
 
 const handleRegister = async () => {
   try {
-    await ElMessageBox.confirm('确定要报名参加这个活动吗？', '确认报名', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'info',
+    await ElMessageBox.confirm("确定要报名参加这个活动吗？", "确认报名", {
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
+      type: "info",
     });
     await eventsApi.register(eventId.value);
-    ElMessage.success('报名成功');
+    ElMessage.success("报名成功");
     fetchEvent();
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('报名失败');
+    if (error !== "cancel") {
+      ElMessage.error("报名失败");
     }
   }
 };
 
 const handleCancelRegistration = async () => {
   try {
-    await ElMessageBox.confirm('确定要取消报名吗？', '确认取消', {
-      confirmButtonText: '确认',
-      cancelButtonText: '取消',
-      type: 'warning',
+    await ElMessageBox.confirm("确定要取消报名吗？", "确认取消", {
+      confirmButtonText: "确认",
+      cancelButtonText: "取消",
+      type: "warning",
     });
     await eventsApi.cancelRegistration(eventId.value);
-    ElMessage.success('已取消报名');
+    ElMessage.success("已取消报名");
     fetchEvent();
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('取消报名失败');
+    if (error !== "cancel") {
+      ElMessage.error("取消报名失败");
     }
   }
 };
@@ -351,26 +517,88 @@ const handleCancelRegistration = async () => {
 const handleEnableCheckIn = async () => {
   try {
     await eventsApi.enableCheckIn(eventId.value);
-    ElMessage.success('签到已开启');
+    ElMessage.success("签到已开启");
     fetchEvent();
   } catch (error) {
-    ElMessage.error('开启签到失败');
+    ElMessage.error("开启签到失败");
   }
 };
 
 const handleCheckIn = async () => {
   try {
     await eventsApi.checkIn(eventId.value);
-    ElMessage.success('签到成功');
+    ElMessage.success("签到成功");
     fetchEvent();
   } catch (error) {
-    ElMessage.error('签到失败');
+    ElMessage.error("签到失败");
   }
+};
+
+const handleCheckInWithCode = async () => {
+  if (checkInCodeInput.value.length !== 6) {
+    ElMessage.warning("请输入6位签到码");
+    return;
+  }
+  checkInSubmitting.value = true;
+  try {
+    await attendanceApi.checkInWithCode(eventId.value, checkInCodeInput.value);
+    ElMessage.success("签到成功！获得10积分");
+    checkInCodeInput.value = "";
+    fetchEvent();
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || "签到失败";
+    ElMessage.error(msg);
+  } finally {
+    checkInSubmitting.value = false;
+  }
+};
+
+const handleGenerateCheckInCode = async () => {
+  try {
+    const res = await eventsApi.generateCheckInCode(eventId.value);
+    ElMessage.success(`签到码已生成: ${res.data.checkInCode}`);
+    fetchEvent();
+  } catch (error) {
+    ElMessage.error("生成签到码失败");
+  }
+};
+
+const handleRegenerateCheckInCode = async () => {
+  try {
+    await ElMessageBox.confirm(
+      "重新生成签到码后，原签到码将失效，确定继续？",
+      "重新生成签到码",
+      {
+        confirmButtonText: "确认",
+        cancelButtonText: "取消",
+        type: "warning",
+      },
+    );
+    const res = await eventsApi.regenerateCheckInCode(eventId.value);
+    ElMessage.success(`新签到码: ${res.data.checkInCode}`);
+    fetchEvent();
+  } catch (error) {
+    if (error !== "cancel") {
+      ElMessage.error("重新生成签到码失败");
+    }
+  }
+};
+
+const copyCheckInCode = () => {
+  if (!event.value?.checkInCode) return;
+  navigator.clipboard
+    .writeText(event.value.checkInCode)
+    .then(() => {
+      ElMessage.success("签到码已复制到剪贴板");
+    })
+    .catch(() => {
+      ElMessage.error("复制失败");
+    });
 };
 
 const handleSubmitSummary = async () => {
   if (!summaryForm.value.content.trim()) {
-    ElMessage.warning('请输入总结内容');
+    ElMessage.warning("请输入总结内容");
     return;
   }
   try {
@@ -378,52 +606,52 @@ const handleSubmitSummary = async () => {
       content: summaryForm.value.content,
       photoUrls: summaryForm.value.photoUrls,
     });
-    ElMessage.success('总结发布成功');
+    ElMessage.success("总结发布成功");
     showSummaryDialog.value = false;
     fetchEvent();
   } catch (error) {
-    ElMessage.error('发布失败');
+    ElMessage.error("发布失败");
   }
 };
 
 const getStatusText = (status: EventStatus): string => {
   const statusMap: Record<EventStatus, string> = {
-    [EventStatus.REGISTERING]: '报名中',
-    [EventStatus.REGISTRATION_CLOSED]: '报名截止',
-    [EventStatus.ONGOING]: '进行中',
-    [EventStatus.ENDED]: '已结束',
+    [EventStatus.REGISTERING]: "报名中",
+    [EventStatus.REGISTRATION_CLOSED]: "报名截止",
+    [EventStatus.ONGOING]: "进行中",
+    [EventStatus.ENDED]: "已结束",
   };
   return statusMap[status];
 };
 
 const getStatusTagType = (status: EventStatus): string => {
   const typeMap: Record<EventStatus, string> = {
-    [EventStatus.REGISTERING]: 'success',
-    [EventStatus.REGISTRATION_CLOSED]: 'warning',
-    [EventStatus.ONGOING]: 'primary',
-    [EventStatus.ENDED]: 'info',
+    [EventStatus.REGISTERING]: "success",
+    [EventStatus.REGISTRATION_CLOSED]: "warning",
+    [EventStatus.ONGOING]: "primary",
+    [EventStatus.ENDED]: "info",
   };
   return typeMap[status];
 };
 
 const getEventTypeText = (type: EventType): string => {
   const typeMap: Record<EventType, string> = {
-    [EventType.LECTURE]: '讲座',
-    [EventType.COMPETITION]: '比赛',
-    [EventType.GATHERING]: '聚会',
-    [EventType.VOLUNTEER]: '志愿',
-    [EventType.TRAINING]: '培训',
+    [EventType.LECTURE]: "讲座",
+    [EventType.COMPETITION]: "比赛",
+    [EventType.GATHERING]: "聚会",
+    [EventType.VOLUNTEER]: "志愿",
+    [EventType.TRAINING]: "培训",
   };
   return typeMap[type];
 };
 
 const formatDateTime = (date: string): string => {
-  return new Date(date).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Date(date).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -516,6 +744,36 @@ onMounted(() => {
 
 .rich-text :deep(img) {
   max-width: 100%;
+}
+
+.checkin-code-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f5f7fa;
+  padding: 20px;
+  border-radius: 8px;
+  justify-content: center;
+}
+
+.code-text {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 12px;
+  color: #409eff;
+  font-family: "Courier New", monospace;
+}
+
+.code-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #909399;
+  text-align: center;
+}
+
+.checkin-code-form {
+  display: flex;
+  align-items: center;
 }
 
 .checkin-time {

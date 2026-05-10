@@ -107,6 +107,22 @@ export class EventsController {
     return this.eventsService.getCheckInStats(id, req.user.id);
   }
 
+  @Post(':id/generate-checkin-code')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '生成签到码' })
+  async generateCheckInCode(@Param('id') id: string, @Request() req) {
+    return this.eventsService.generateCheckInCode(id, req.user.id);
+  }
+
+  @Post(':id/regenerate-checkin-code')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '重新生成签到码' })
+  async regenerateCheckInCode(@Param('id') id: string, @Request() req) {
+    return this.eventsService.regenerateCheckInCode(id, req.user.id);
+  }
+
   @Post(':id/summary')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

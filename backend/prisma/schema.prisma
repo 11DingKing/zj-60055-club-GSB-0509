@@ -34,6 +34,14 @@ enum EventStatus {
   ENDED
 }
 
+enum PointsType {
+  CREATE_EVENT
+  CHECK_IN
+  PUBLISH_ANNOUNCEMENT
+  KICKED_FROM_CLUB
+  CANCEL_CHECKED_IN_REGISTRATION
+}
+
 model User {
   id            String    @id @default(uuid())
   username      String    @unique
@@ -43,6 +51,7 @@ model User {
   phone         String?   @unique
   role          UserRole  @default(MEMBER)
   avatar        String?
+  points        Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -52,6 +61,8 @@ model User {
   eventRegistrations   EventRegistration[]
   checkInRecords       CheckInRecord[]
   ledClubs             Club[]            @relation("ClubLeader")
+  attendances          Attendance[]
+  pointsLogs           PointsLog[]
 
   @@map("users")
 }
@@ -155,12 +166,14 @@ model Event {
   startTime         DateTime
   endTime           DateTime
   checkInEnabled    Boolean     @default(false)
+  checkInCode       String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
   club              Club        @relation(fields: [clubId], references: [id])
   registrations     EventRegistration[]
   checkInRecords    CheckInRecord[]
+  attendances       Attendance[]
   summary           EventSummary?
 
   @@map("events")
@@ -205,4 +218,31 @@ model EventSummary {
   event           Event     @relation(fields: [eventId], references: [id])
 
   @@map("event_summaries")
+}
+
+model Attendance {
+  id              String    @id @default(uuid())
+  eventId         String
+  userId          String
+  checkInCode     String
+  checkedInAt     DateTime  @default(now())
+
+  event           Event     @relation(fields: [eventId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("attendances")
+}
+
+model PointsLog {
+  id              String      @id @default(uuid())
+  userId          String
+  type            PointsType
+  amount          Int
+  reason          String
+  createdAt       DateTime    @default(now())
+
+  user            User        @relation(fields: [userId], references: [id])
+
+  @@map("points_logs")
 }
