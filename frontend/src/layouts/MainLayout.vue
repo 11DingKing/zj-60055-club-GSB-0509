@@ -17,6 +17,7 @@
         <el-menu-item index="/club-square">社团广场</el-menu-item>
         <el-menu-item index="/events">活动列表</el-menu-item>
         <el-menu-item index="/my-clubs">我的社团</el-menu-item>
+        <el-menu-item index="/points">我的积分</el-menu-item>
         <el-menu-item index="/create-club">创建社团</el-menu-item>
         <el-sub-menu index="admin" v-if="userStore.isAdmin">
           <template #title>管理后台</template>

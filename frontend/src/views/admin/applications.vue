@@ -118,8 +118,7 @@ const fetchApplications = async () => {
   loading.value = true;
   try {
     const params = filterStatus.value ? { status: filterStatus.value } : undefined;
-    const res = await clubsApi.getAllApplications(params);
-    applications.value = res.data;
+    applications.value = await clubsApi.getAllApplications(params) as any;
   } catch (error) {
     ElMessage.error('获取申请列表失败');
   } finally {

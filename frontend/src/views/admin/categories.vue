@@ -103,8 +103,7 @@ const rules: FormRules = {
 const fetchCategories = async () => {
   loading.value = true;
   try {
-    const res = await clubsApi.getCategories();
-    categories.value = res.data;
+    categories.value = await clubsApi.getCategories();
   } catch (error) {
     ElMessage.error('获取分类列表失败');
   } finally {

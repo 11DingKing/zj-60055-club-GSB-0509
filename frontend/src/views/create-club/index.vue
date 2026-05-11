@@ -105,8 +105,7 @@ const rules: FormRules = {
 
 const fetchCategories = async () => {
   try {
-    const res = await clubsApi.getCategories();
-    categories.value = res.data;
+    categories.value = await clubsApi.getCategories();
   } catch (error) {
     ElMessage.error('获取分类失败');
   }
