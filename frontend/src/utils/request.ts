@@ -1,15 +1,33 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { ElMessage } from 'element-plus';
 import { useUserStore } from '@/stores/user';
 import router from '@/router';
 
-const request: AxiosInstance = axios.create({
+const request = axios.create({
   baseURL: '/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+type RequestConfig = Omit<AxiosRequestConfig, 'data'> & { data?: unknown };
+
+declare module 'axios' {
+  interface AxiosInstance {
+    request<T = unknown>(config: RequestConfig): Promise<T>;
+    get<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
+    delete<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
+    head<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
+    options<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
+    post<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+    put<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+    patch<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+    postForm<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+    putForm<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+    patchForm<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
+  }
+}
 
 request.interceptors.request.use(
   (config) => {

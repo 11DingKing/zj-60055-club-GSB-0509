@@ -125,8 +125,7 @@ const filteredEvents = computed(() => {
 const fetchEvents = async () => {
   loading.value = true;
   try {
-    const res = await eventsApi.getEvents();
-    events.value = res.data;
+    events.value = await eventsApi.getEvents();
   } catch (error) {
     ElMessage.error('获取活动列表失败');
   } finally {

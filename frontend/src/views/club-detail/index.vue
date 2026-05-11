@@ -319,7 +319,8 @@ import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { clubsApi } from '@/api/clubs';
 import { eventsApi } from '@/api/events';
-import type { Club, ClubAnnouncement, ClubMember, Event, EventStatus } from '@/types';
+import { EventStatus } from '@/types';
+import type { Club, ClubAnnouncement, ClubMember, Event } from '@/types';
 import { useUserStore } from '@/stores/user';
 import { Location, Calendar } from '@element-plus/icons-vue';
 

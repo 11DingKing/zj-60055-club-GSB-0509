@@ -187,8 +187,7 @@ const stats = ref<DashboardStats>({
 
 const fetchStats = async () => {
   try {
-    const res = await statisticsApi.getDashboardStats();
-    stats.value = res.data;
+    stats.value = await statisticsApi.getDashboardStats();
     renderCharts();
   } catch (error) {
     ElMessage.error('获取统计数据失败');

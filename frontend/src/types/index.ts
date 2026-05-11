@@ -52,6 +52,9 @@ export interface Club {
   leader?: Pick<User, "id" | "name" | "avatar">;
   memberCount?: number;
   eventCount?: number;
+  members?: ClubMember[];
+  announcements?: ClubAnnouncement[];
+  events?: Event[];
 }
 
 export interface ClubMember {

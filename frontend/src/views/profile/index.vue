@@ -167,7 +167,6 @@ const goToPoints = () => {
 const activeTab = ref("registrations");
 const registrations = ref<EventRegistration[]>([]);
 const checkins = ref<CheckInRecord[]>([]);
-const loading = ref(false);
 
 const getRoleText = (role?: UserRole): string => {
   const roleMap: Record<UserRole, string> = {
@@ -208,8 +207,7 @@ const formatDateTime = (date: string): string => {
 
 const fetchRegistrations = async () => {
   try {
-    const res = await usersApi.getMyRegistrations();
-    registrations.value = res.data;
+    registrations.value = await usersApi.getMyRegistrations();
   } catch (error) {
     ElMessage.error("获取报名记录失败");
   }
@@ -217,8 +215,7 @@ const fetchRegistrations = async () => {
 
 const fetchCheckins = async () => {
   try {
-    const res = await usersApi.getMyCheckIns();
-    checkins.value = res.data;
+    checkins.value = await usersApi.getMyCheckIns();
   } catch (error) {
     ElMessage.error("获取签到记录失败");
   }

@@ -71,7 +71,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Medal, Plus, Minus } from '@element-plus/icons-vue';
+import { Medal } from '@element-plus/icons-vue';
 import { pointsApi, PointsInfo, PointsLog } from '@/api/points';
 
 const pointsInfo = ref<PointsInfo | null>(null);
@@ -83,8 +83,7 @@ const total = ref(0);
 
 const fetchPointsInfo = async () => {
   try {
-    const res = await pointsApi.getMyPoints();
-    pointsInfo.value = res.data;
+    pointsInfo.value = await pointsApi.getMyPoints();
   } catch (error) {
     ElMessage.error('获取积分信息失败');
   }
@@ -97,8 +96,8 @@ const fetchPointsLogs = async () => {
       page: currentPage.value,
       pageSize: pageSize.value,
     });
-    pointsLogs.value = res.data.list;
-    total.value = res.data.total;
+    pointsLogs.value = res.list;
+    total.value = res.total;
   } catch (error) {
     ElMessage.error('获取积分明细失败');
   } finally {

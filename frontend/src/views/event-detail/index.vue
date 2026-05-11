@@ -372,7 +372,6 @@ import {
   ArrowLeft,
   Calendar,
   Location,
-  User,
   CircleCheck,
   Refresh,
 } from "@element-plus/icons-vue";
@@ -429,8 +428,7 @@ const canCheckInNow = computed(() => {
 const fetchEvent = async () => {
   loading.value = true;
   try {
-    const res = await eventsApi.getEventById(eventId.value);
-    event.value = res.data;
+    event.value = await eventsApi.getEventById(eventId.value);
   } catch (error) {
     ElMessage.error("获取活动详情失败");
   } finally {
@@ -441,8 +439,9 @@ const fetchEvent = async () => {
 const fetchCheckInStats = async () => {
   if (!canManageEvent.value) return;
   try {
-    const res = await eventsApi.getCheckInStats(eventId.value);
-    checkinStats.value = res.data;
+    checkinStats.value = (await eventsApi.getCheckInStats(
+      eventId.value,
+    )) as any;
   } catch (error) {
     console.error("获取签到统计失败", error);
   }
@@ -492,27 +491,16 @@ const handleEnableCheckIn = async () => {
   }
 };
 
-const handleCheckIn = async () => {
-  try {
-    await eventsApi.checkIn(eventId.value);
-    ElMessage.success("签到成功");
-    fetchEvent();
-  } catch (error) {
-    ElMessage.error("签到失败");
-  }
-};
-
 const handleCheckInWithCode = async () => {
   if (!checkInForm.value.code || checkInForm.value.code.length !== 6) {
     ElMessage.warning("请输入6位签到码");
     return;
   }
   try {
-    const res = await eventsApi.checkInWithCode(
+    userAttendance.value = await eventsApi.checkInWithCode(
       eventId.value,
       checkInForm.value.code,
     );
-    userAttendance.value = res.data;
     ElMessage.success("签到成功");
     checkInForm.value.code = "";
   } catch (error: any) {
@@ -527,9 +515,9 @@ const handleRegenerateCode = async () => {
       cancelButtonText: "取消",
       type: "warning",
     });
-    const res = await eventsApi.regenerateCheckInCode(eventId.value);
+    const res = (await eventsApi.regenerateCheckInCode(eventId.value)) as any;
     if (event.value) {
-      event.value.checkInCode = res.data.checkInCode;
+      event.value.checkInCode = res.checkInCode;
     }
     ElMessage.success("签到码已重新生成");
   } catch (error) {

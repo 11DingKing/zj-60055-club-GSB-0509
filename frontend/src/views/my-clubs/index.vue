@@ -114,15 +114,14 @@ const isLeader = (club: Club) => {
   return club.leaderId === userStore.userInfo?.id;
 };
 
-const isViceLeader = (club: Club) => {
+const isViceLeader = (_club: Club) => {
   return false;
 };
 
 const fetchClubs = async () => {
   loading.value = true;
   try {
-    const res = await clubsApi.getClubs();
-    clubs.value = res.data;
+    clubs.value = await clubsApi.getClubs();
   } catch (error) {
     ElMessage.error('获取社团列表失败');
   } finally {
